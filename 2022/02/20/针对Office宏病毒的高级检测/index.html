@@ -1,0 +1,796 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/avatar.jpg">
+  <link rel="icon" href="/img/avatar.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="慕长风">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="在之前的文章——《威胁狩猎的最佳实践》里提到过一个针对钓鱼邮件的检测场景，本文会详细分享下当时使用的检测技巧">
+<meta property="og:type" content="article">
+<meta property="og:title" content="针对Office宏病毒的高级检测">
+<meta property="og:url" content="https://muchangfeng.com/2022/02/20/%E9%92%88%E5%AF%B9Office%E5%AE%8F%E7%97%85%E6%AF%92%E7%9A%84%E9%AB%98%E7%BA%A7%E6%A3%80%E6%B5%8B/index.html">
+<meta property="og:site_name" content="慕长风的小酒馆">
+<meta property="og:description" content="在之前的文章——《威胁狩猎的最佳实践》里提到过一个针对钓鱼邮件的检测场景，本文会详细分享下当时使用的检测技巧">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://photo.moofeng.cn/typora/image-20220120144138140.png">
+<meta property="article:published_time" content="2022-02-20T07:30:02.000Z">
+<meta property="article:modified_time" content="2022-02-16T08:26:53.258Z">
+<meta property="article:author" content="慕长风">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://photo.moofeng.cn/typora/image-20220120144138140.png">
+  
+  
+  <title>针对Office宏病毒的高级检测 - 慕长风的小酒馆</title>
+
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"muchangfeng.com","root":"/","version":"1.8.14","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"pDqTgkge6AYMMtLKaVJCILFv-gzGzoHsz","app_key":"b4RgBYwktF5lnglCRU472Azq","server_url":null,"path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>慕长风的小酒馆</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/banner.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          <span id="subtitle" title="针对Office宏病毒的高级检测">
+            
+          </span>
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2022-02-20 15:30" pubdate>
+          2022年2月20日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          4.5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          12 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">针对Office宏病毒的高级检测</h1>
+            
+            <div class="markdown-body">
+              
+              <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在之前的文章——<a target="_blank" rel="noopener" href="https://blog.moofeng.cn/jian-ce-gong-cheng/wei-xie-shou-lie-de-zui-jia-shi-jian#shen-ru-yan-jiu">《威胁狩猎的最佳实践》</a>里提到过一个针对钓鱼邮件的检测场景，本文会详细分享下当时使用的检测技巧</p>
+<p>遵循前文提到的威胁狩猎流程，让我们从威胁假设(hypothesis)出发：</p>
+<blockquote>
+<p>攻击者可能发送带有恶意附件的钓鱼邮件，诱导受害者点击从而获取对方的系统控制权限</p>
+</blockquote>
+<p>期间会借助 <a target="_blank" rel="noopener" href="https://github.com/redcanaryco/atomic-red-team/">Atomic</a> 工具完成攻击复现，再对具体的过程细节进行分析取证，然后深入研究、剖析其行为特征</p>
+<p>最后输出检测规则或者 dashboard，作为本次威胁狩猎活动的产出</p>
+<p>PS：注意，这里只是提供一种检测思路，测试过程均在实验环境下完成，并不代表实际工作效果</p>
+<h1 id="分析取证"><a href="#分析取证" class="headerlink" title="分析取证"></a>分析取证</h1><p>在对特定攻击活动做数字取证(Digital Forensics)的过程中，通常我会采用<strong>漏斗状的思维模型</strong>，一步步缩小观测范围，聚焦目标行为特征</p>
+<p>简单做了张图，大概是这么个意思：</p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220120144138140.png" srcset="/img/loading.gif" lazyload alt="image-20220120144138140"></p>
+<h2 id="采集全量日志"><a href="#采集全量日志" class="headerlink" title="采集全量日志"></a>采集全量日志</h2><p>针对威胁假设的场景，首先我们需要尽可能地保证 office 办公软件的所有行为无处遁形</p>
+<p>为了实现图中的逐层分析，还是拿出我惯用的 sysmon，借助其<strong>配置文件</strong>来完成，千万别小瞧了这些配置，里面可是有宝藏的！</p>
+<p>第一步，建立 <strong>OfficeWatch.xml</strong> 的配置文件，部分内容示例如下：</p>
+<figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><code class="hljs xml"><span class="hljs-tag">&lt;<span class="hljs-name">Sysmon</span> <span class="hljs-attr">schemaversion</span>=<span class="hljs-string">&quot;4.70&quot;</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">HashAlgorithms</span>&gt;</span>md5<span class="hljs-tag">&lt;/<span class="hljs-name">HashAlgorithms</span>&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">CheckRevocation</span>/&gt;</span><br>  <span class="hljs-tag">&lt;<span class="hljs-name">EventFiltering</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">RuleGroup</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;Process Creation-Include&quot;</span> <span class="hljs-attr">groupRelation</span>=<span class="hljs-string">&quot;or&quot;</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">ProcessCreate</span> <span class="hljs-attr">onmatch</span>=<span class="hljs-string">&quot;include&quot;</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">Image</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;&quot;</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">&quot;end with&quot;</span>&gt;</span>WINWORD.EXE<span class="hljs-tag">&lt;/<span class="hljs-name">Image</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">ParentImage</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;&quot;</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">&quot;end with&quot;</span>&gt;</span>WINWORD.EXE<span class="hljs-tag">&lt;/<span class="hljs-name">ParentImage</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">Image</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;&quot;</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">&quot;end with&quot;</span>&gt;</span>EXCEL.EXE<span class="hljs-tag">&lt;/<span class="hljs-name">Image</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">ParentImage</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;&quot;</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">&quot;end with&quot;</span>&gt;</span>EXCEL.EXE<span class="hljs-tag">&lt;/<span class="hljs-name">ParentImage</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">ProcessCreate</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">RuleGroup</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">RuleGroup</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;Process Creation-Exclude&quot;</span> <span class="hljs-attr">groupRelation</span>=<span class="hljs-string">&quot;or&quot;</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">ProcessCreate</span> <span class="hljs-attr">onmatch</span>=<span class="hljs-string">&quot;exclude&quot;</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">ProcessCreate</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">RuleGroup</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">RuleGroup</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;Network Connect-Include&quot;</span> <span class="hljs-attr">groupRelation</span>=<span class="hljs-string">&quot;or&quot;</span>&gt;</span><br>        <span class="hljs-tag">&lt;<span class="hljs-name">NetworkConnect</span> <span class="hljs-attr">onmatch</span>=<span class="hljs-string">&quot;include&quot;</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">Image</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;&quot;</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">&quot;end with&quot;</span>&gt;</span>WINWORD.EXE<span class="hljs-tag">&lt;/<span class="hljs-name">Image</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">Image</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;&quot;</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">&quot;end with&quot;</span>&gt;</span>EXCEL.EXE<span class="hljs-tag">&lt;/<span class="hljs-name">Image</span>&gt;</span><br>        <span class="hljs-tag">&lt;/<span class="hljs-name">NetworkConnect</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">RuleGroup</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">RuleGroup</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;Network Connect-Exclude&quot;</span> <span class="hljs-attr">groupRelation</span>=<span class="hljs-string">&quot;or&quot;</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">NetworkConnect</span> <span class="hljs-attr">onmatch</span>=<span class="hljs-string">&quot;exclude&quot;</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">NetworkConnect</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">RuleGroup</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">RuleGroup</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;File Create - Include&quot;</span> <span class="hljs-attr">groupRelation</span>=<span class="hljs-string">&quot;or&quot;</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">FileCreate</span> <span class="hljs-attr">onmatch</span>=<span class="hljs-string">&quot;include&quot;</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">Image</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;&quot;</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">&quot;end with&quot;</span>&gt;</span>WINWORD.EXE<span class="hljs-tag">&lt;/<span class="hljs-name">Image</span>&gt;</span><br>          <span class="hljs-tag">&lt;<span class="hljs-name">Image</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;&quot;</span> <span class="hljs-attr">condition</span>=<span class="hljs-string">&quot;end with&quot;</span>&gt;</span>EXCEL.EXE<span class="hljs-tag">&lt;/<span class="hljs-name">Image</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">FileCreate</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">RuleGroup</span>&gt;</span><br>    <span class="hljs-tag">&lt;<span class="hljs-name">RuleGroup</span> <span class="hljs-attr">name</span>=<span class="hljs-string">&quot;File Create - Exclude&quot;</span> <span class="hljs-attr">groupRelation</span>=<span class="hljs-string">&quot;or&quot;</span>&gt;</span><br>      <span class="hljs-tag">&lt;<span class="hljs-name">FileCreate</span> <span class="hljs-attr">onmatch</span>=<span class="hljs-string">&quot;exclude&quot;</span>&gt;</span><br>      <span class="hljs-tag">&lt;/<span class="hljs-name">FileCreate</span>&gt;</span><br>    <span class="hljs-tag">&lt;/<span class="hljs-name">RuleGroup</span>&gt;</span><br>  <span class="hljs-tag">&lt;/<span class="hljs-name">EventFiltering</span>&gt;</span><br><span class="hljs-tag">&lt;/<span class="hljs-name">Sysmon</span>&gt;</span><br></code></pre></td></tr></table></figure>
+
+<p>指定 office 软件相关的文件名，保证其进程、文件、网络、DLL 加载和注册表等日志均能被全量采集，同时避免干扰信息</p>
+<p>另外，这一步的主要目的不仅是为了<strong>保持观测目标的可见性</strong>，更是为了下一步缩小观测范围而<strong>建立遥测数据的白名单</strong></p>
+<p>例如，平常我们在打开 word 文档的过程中，会产生与微软服务器间的通信，这些是我们需要进行加白处理的</p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220120152550496.png" srcset="/img/loading.gif" lazyload alt="image-20220120152550496"></p>
+<p>同样的，这些加载的 DLL 文件也可以建立一份白名单，当然也别忘了多加留意它们的<strong>签名状态</strong>(SignatureStatus)</p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220120153122528.png" srcset="/img/loading.gif" lazyload alt="image-20220120153122528"></p>
+<p>最后，分析、汇总上述成果，建立一份新的配置文件，用于过滤 office 办公软件的正常行为，将其命名为 <strong>OfficeShush.xml</strong></p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220120153519125.png" srcset="/img/loading.gif" lazyload alt="image-20220120153519125"></p>
+<h2 id="过滤正常行为"><a href="#过滤正常行为" class="headerlink" title="过滤正常行为"></a>过滤正常行为</h2><p>关于 OfficeShush.xml 文件的迭代，其实也就是我们对 office 软件相关进程<strong>建设行为基线</strong>的过程</p>
+<p>这一步需要我们在实验环境下考量全面，夯实基础，再去生产环境中慢慢打磨优化</p>
+<p>然后，便得引入丰富的恶意样本，分析其在过滤正常行为后的特征表现</p>
+<p>这里其实就是<strong>攻击复现</strong>的过程了，以 <a target="_blank" rel="noopener" href="https://github.com/redcanaryco/atomic-red-team/blob/master/atomics/T1204.002/T1204.002.md">T1204.002</a> 为例，跑完攻击脚本，看看会有哪些有意思的发现：</p>
+<p>—— 一些脚本文件的创建</p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220120210958734.png" srcset="/img/loading.gif" lazyload alt="image-20220120210958734"></p>
+<p>—— 一些异常的命令执行和父子进程关系</p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220120211243311.png" srcset="/img/loading.gif" lazyload alt="image-20220120211243311"></p>
+<p>—— 一些特定行为(例如运行宏、XMLDOM、WMI等)才会加载的 DLL </p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220120212238439.png" srcset="/img/loading.gif" lazyload alt="image-20220120212238439"></p>
+<h2 id="聚焦可疑特征"><a href="#聚焦可疑特征" class="headerlink" title="聚焦可疑特征"></a>聚焦可疑特征</h2><p>通过对各类恶意样本或者具体攻击方式做深入分析，我们可以简单梳理一些常见攻击行为会表现出来的特征：</p>
+<ul>
+<li>可疑文件的落地(释放脚本或可执行文件)</li>
+<li>涉及敏感注册表位置的修改</li>
+<li>可疑DLL文件的加载行为(加载COM、WMI、或.NET功能所必需的DLL文件)</li>
+<li>可疑的网络请求行为(与云服务商或者奇怪的域名通信)</li>
+<li>异常的父子进程关系(office软件调用powershell、cmd命令行)</li>
+<li>…</li>
+</ul>
+<p>整理好这些特征点，我们可以凭此生成新的日志采集配置文件，或者给相应的遥测数据打上标签，或者直接加工后转换成检测规则</p>
+<p>但是在此之前呢，我想先介绍一种告警手段 —— <strong>Risk-Based Alerting(RBA)</strong></p>
+<p>一些安全运营人员可能对“<strong>元告警</strong>”(Meta-Alert)的概念并不陌生，这类告警通常由其它安全设备上报而来</p>
+<p>比如在 SIEM 上消费由 EDR 产生的病毒或后门类的告警，这种可以称之为 “meta alert”</p>
+<p>在此基础之上，我想谈论的情况是：<strong>在一段时间内，有两条及以上针对同一主机(事件)的检测规则，组合产生了一条告警</strong></p>
+<p>什么时候应该使用这种告警方式呢？</p>
+<p>在很多场景中，SIEM 或 SOC 平台上的规则检出只能被视为一种<strong>弱信号</strong>(weak signals)</p>
+<p>它们更适宜被归类成 observable 或 indicator，而不适合直接用作告警，否则会引起运营人员的<strong>告警疲劳</strong></p>
+<p>此时如果我们通过一种检测方式对这些信号做关联分析，最后产出告警，这一思路就被称作 RBA</p>
+<p>受限于手头的工具和平台，本文我只能借助 splunk 演示一种类似的检测方式，通过生成一段 <strong>Hyper Queries</strong> 来达到差不多的效果</p>
+<h1 id="威胁分析"><a href="#威胁分析" class="headerlink" title="威胁分析"></a>威胁分析</h1><h2 id="行为检测"><a href="#行为检测" class="headerlink" title="行为检测"></a>行为检测</h2><p>根据前面整理出的这些 office 宏病毒相关的可疑活动或者高危操作的行为特征，先写一些简单的规则给它们定个性</p>
+<p>这一步可以借助 splunk 给符合特定行为的 sysmon 日志<strong>打上不同的标签</strong>，或者<strong>进行危害评分</strong>，便于后续做关联分析</p>
+<p>比如攻击者可能会利用宏代码调用 cmd、powershell 等进程，进一步完成恶意命令执行的操作</p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220121173745746.png" srcset="/img/loading.gif" lazyload alt="image-20220121173745746"></p>
+<p>或者攻击者会将 payload 写入磁盘，以特定后缀形式的文件在受害者主机落地</p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220121175146676.png" srcset="/img/loading.gif" lazyload alt="image-20220121175146676"></p>
+<h2 id="风险判定"><a href="#风险判定" class="headerlink" title="风险判定"></a>风险判定</h2><p>放在平时，或许很多人会直接拿着这些行为特征输出成告警</p>
+<p>但是针对 office 邮件钓鱼这类频发场景，我们不妨深入研究下，加入一些算法以提高告警置信度</p>
+<p>以下演示中，我会为不同的行为简单地指定风险评分，最后进行求和汇总，将超过特定阈值的一系列行为视作高危操作</p>
+<p>为方便读者自行对比，找了一篇友商近期的分析文章：<a target="_blank" rel="noopener" href="https://mp.weixin.qq.com/s/1L7o1C-aGlMBAXzHqR9udA">https://mp.weixin.qq.com/s/1L7o1C-aGlMBAXzHqR9udA</a></p>
+<p>然后上 ANYRUN 拿了份样本：<a target="_blank" rel="noopener" href="https://app.any.run/tasks/300229f4-dd97-42d8-bbce-72274ef8b9e9">https://app.any.run/tasks/300229f4-dd97-42d8-bbce-72274ef8b9e9</a></p>
+<p>实验过程中的检测效果如下：</p>
+<p><img src="https://photo.moofeng.cn/typora/image-20220121220759009.png" srcset="/img/loading.gif" lazyload alt="image-20220121220759009"></p>
+<p>演示代码放在这里：<a target="_blank" rel="noopener" href="https://github.com/Moofeng/DemoCode/blob/main/office_detection_spl">https://github.com/Moofeng/DemoCode/blob/main/office_detection_spl</a></p>
+<p>结合上述文章和检测结果，可以看到攻击过程几个异常点都能很好的标识出来，例如 <strong>background.dll 文件的落地</strong>和<strong>通过 COM 对象执行计划任务</strong>等关键步骤</p>
+<p>最后的判定结果还是具备一定参考意义的，当然，具体的评分体系需要自行设置和优化</p>
+<h1 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h1><p>本文灵感来源于 <a target="_blank" rel="noopener" href="https://twitter.com/Antonlovesdnb">@Anton</a>，篇幅限制，省略了部分细节，强烈建议感兴趣的同学去看原视频：</p>
+<p><a target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=soF5iyeeWDg">https://www.youtube.com/watch?v=soF5iyeeWDg</a></p>
+<p>实验过程中借助 splunk 实现的一些检测技巧，参考 <a target="_blank" rel="noopener" href="https://twitter.com/ateixei">@Alex</a> 的文章：</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/inodee/threathunting-spl/blob/master/hunt-queries/powershell_qualifiers.md">https://github.com/inodee/threathunting-spl/blob/master/hunt-queries/powershell_qualifiers.md</a></p>
+<p>感谢！</p>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%A8%81%E8%83%81%E7%8B%A9%E7%8C%8E/" class="category-chain-item">威胁狩猎</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>针对Office宏病毒的高级检测</div>
+      <div>https://muchangfeng.com/2022/02/20/%E9%92%88%E5%AF%B9Office%E5%AE%8F%E7%97%85%E6%AF%92%E7%9A%84%E9%AB%98%E7%BA%A7%E6%A3%80%E6%B5%8B/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>慕长风</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2022年2月20日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2022/01/29/%E5%88%A9%E7%94%A8RITA%E6%A3%80%E6%B5%8Bbeacon%E9%80%9A%E4%BF%A1/" title="利用RITA检测beacon通信">
+                        <span class="hidden-mobile">利用RITA检测beacon通信</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://cdn.staticfile.org/valine/1.4.16/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"pDqTgkge6AYMMtLKaVJCILFv-gzGzoHsz","appKey":"b4RgBYwktF5lnglCRU472Azq","path":"window.location.pathname","placeholder":null,"avatar":"retro","meta":["nick","mail"],"requiredFields":["nick"],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+      记录和分享我的网安成长历程。
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.staticfile.org/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://cdn.staticfile.org/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  <script  src="https://cdn.staticfile.org/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var title = subtitle.title;
+      
+        typing(title);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.staticfile.org/tocbot/4.18.0/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.staticfile.org/clipboard.js/2.0.10/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.staticfile.org/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.staticfile.org/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>

