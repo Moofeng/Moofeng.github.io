@@ -136,5 +136,24 @@
   
   
   
+  <entry>
+    <title>Linux下Meterpreter执行原理浅析</title>
+    <link href="/posts/2686102635/"/>
+    <url>/posts/2686102635/</url>
+    
+    <content type="html"><![CDATA[<h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>针对 Meterpreter 的投递流程和原理分析，网上已有一部分相关资料了</p><p>但是大多是基于 Windows 系统，Linux 下的分析资料好像并不全面。</p><p>为此，我从源码入手，简单的分析了 Linux 下 Meterpreter 的生成和执行流程，以下记录了部分过程</p><h1 id="说明"><a href="#说明" class="headerlink" title="说明"></a>说明</h1><p>研究对象：<code>linux/x86/meterpreter/reverse_tcp  </code></p><p>这种 staged 类型的 payload，攻击过程通常是先由服务端生成一段 shellcode</p><p>接着可以选择 msf 自带的各种 shellcode_loader，不过其特征都太明显，通常都是自己去对 shellcode 做免杀</p><p>Meterpreter 的执行流程主要分两个阶段，第一阶段就是上述shellcode的执行</p><p>这段 shellcode 也被称作 stager，其作用只是简单的与服务端建立连接，然后开始接受第二阶段服务端发送的 stage 并执行</p><p>针对这段 shellcode 网上已经有很多很详细的分析资料了，感兴趣的可以自行查阅，下面我主要从源码分析第二阶段的执行流程</p><p>先简单的提一下：</p><p>Stage 部分由两个文件组成，一段 shellcode 和一份 ELF 格式的可执行文件</p><p>后者是 C 编写的跨平台的 meterpreter，在新版的 msf 中被称作 mettle，而该 shellcode 可以看成是 mettel 的加载器  </p><h1 id="开始"><a href="#开始" class="headerlink" title="开始"></a>开始</h1><p>直接进入相关代码来看stage的生成过程</p><p><img src="https://photo.moofeng.cn/typora/640.jpeg" alt="img"></p><p>可以看到，以上代码是服务端在连接建立后的相关处理，首先生成第二阶段要用到的 payload <img src="https://photo.moofeng.cn/typora/640-16476731918521.png" alt="img"></p><p>跟进 generate_stage 函数</p><p><img src="https://photo.moofeng.cn/typora/640-16476731918522.jpeg" alt="img"></p><p>继续跟进，在 mettle.rb 中找到 payload 生成的关键函数</p><p><img src="https://photo.moofeng.cn/typora/640-16476731918523.png" alt="img"></p><p>发现是从现有文件中读取得来，定位到目标文件</p><p><img src="https://photo.moofeng.cn/typora/640-16476731918524.png" alt="img"></p><p>可知，第二阶段用到的主体文件就是这个 mettle.bin</p><p>注意，此时还未发送该 payload，回到前面接着往下看</p><p><img src="https://photo.moofeng.cn/typora/640-16476731918525.png" alt="img"></p><p>对 stage 做编码和加密等处理，暂时先不管，继续往下看</p><p><img src="https://photo.moofeng.cn/typora/640-16476731918526.png" alt="img"></p><p>可以看到，这里发送了 midstager，这是第二阶段发送的第一个 shellcode</p><p>跟进 generate_intermediate_stage 函数，去看看它的生成过程</p><p><img src="https://photo.moofeng.cn/typora/640-16476731918527.jpeg" alt="img"></p><p><img src="https://photo.moofeng.cn/typora/640-16476731918528.png" alt="img"></p><p>为了方便阅读，我把源码中两函数上下调换了位置  </p><p>可以看出，midstager 是由一段固定的汇编代码生成的 shellcode，只是需要的 payload 长度和入口偏移地址等参数不同</p><p>shellcode.rb 中的具体生成过程这里就不跟进了  </p><p>回到最开始的 stager.rb 继续分析  </p><p><img src="https://photo.moofeng.cn/typora/640-16476731918529.png" alt="img"></p><p>最后就是一些信息的打印和 stage 的发送了</p><p>以上就是第二阶段的一个大致流程</p><h1 id="结语"><a href="#结语" class="headerlink" title="结语"></a>结语</h1><p>后面的实践中，我简单地提取了几条规则，然后复现了一波并在流量中捕获到了相关特征，证实了我上述分析的正确性</p><p>这次针对 Meterpreter 的分析，原本是为了做恶意流量检测</p><p>但是在实际场景中，深入理解其具体的执行流程，可以做更多有意思的事</p><p>比如在之前的学习过程中，我看到很多大佬都重写了一些加载器，有的甚至自写了 Meterpreter 的服务端</p><p>到了真正的攻防对抗场景中，只有深入理解攻击原理，才能激发更多有意义的 idea</p><p>而只有具备扎实的基本功，才有能力将这些 idea 落地</p>]]></content>
+    
+    
+    <categories>
+      
+      <category>安全攻防</category>
+      
+    </categories>
+    
+    
+  </entry>
+  
+  
+  
   
 </search>
